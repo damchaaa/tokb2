@@ -1,0 +1,89 @@
+HANDLE openDeviceForRead()//открыть устройство для чтения
+{
+	HANDLE handle;
+	handle = CreateFile(L"\\\\.\\F:",
+		GENERIC_READ, 0,
+		NULL, OPEN_EXISTING, 0, NULL);
+	if (handle != INVALID_HANDLE_VALUE)
+	{
+		return handle;
+	}
+	else
+	{
+		MessageBox::Show("Устройство не найдено!!",
+			"Ошибка!", MessageBoxButtons::OK,
+			MessageBoxIcon::Asterisk);
+		//CloseHandle(handle);
+		Application::Exit();
+	}
+}
+
+HANDLE openDeviceForWrite()//открыть устройство для записи
+{
+	HANDLE handle;
+	handle = CreateFile(L"\\\\.\\F:",
+		GENERIC_WRITE, 0,
+		NULL, OPEN_EXISTING, 0, NULL);
+	if (handle != INVALID_HANDLE_VALUE)
+	{
+		return handle;
+	}
+	else
+	{
+		MessageBox::Show("Устройство не найдено!!",
+			"Ошибка!", MessageBoxButtons::OK,
+			MessageBoxIcon::Asterisk);
+		//CloseHandle(handle);
+		Application::Exit();
+	}
+}
+
+void InitSector(HANDLE device, DWORD sector, char *pass)//чтение и запись в сектор
+{
+	const int numberofsectors = 1;
+	SetFilePointer(device, (sector * 512), NULL, FILE_BEGIN);
+	DWORD dwBytesRead;
+
+	char buffer[512];
+	if (ReadFile(device, buffer, 512 * numberofsectors, &dwBytesRead, NULL))//если чтение успешно
+	{
+		//записываем с 54 символа пароль
+		int sum = 0;
+		int countSymbs = 0;
+		for (int i = 54; i <= 54 + strlen(pass); i++)
+		{
+			if (buffer[i] == pass[sum])
+			{
+				countSymbs++;
+			}
+			else
+			{
+				buffer[i] = pass[sum];
+
+			}
+			sum++;
+		}
+		CloseHandle(device);
+		HANDLE hDevice1 = openDeviceForWrite();
+		if (hDevice1 != INVALID_HANDLE_VALUE)
+		{
+			if (WriteFile(device, buffer, 512 * numberofsectors, &dwBytesRead, NULL))// если запись успешна
+			{
+				MessageBox::Show("Пароль успешно записан на устройство!!!",
+					"Удачно!!", MessageBoxButtons::OK,
+					MessageBoxIcon::Asterisk);
+
+				CloseHandle(device);
+			}
+		}
+	}
+}
+void WritePassToNullSector(char *pass)//запись пароля в нулевой сектор устройства
+{
+	HANDLE hDevice = openDeviceForRead();
+	//открываем устройство для чтения
+	if (hDevice != INVALID_HANDLE_VALUE)
+	{
+		InitSector(hDevice, 0, pass);
+	}
+}
